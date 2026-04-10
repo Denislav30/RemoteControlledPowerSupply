@@ -1,14 +1,28 @@
 Kristian
-    1. Flash a SD Card for Olimex A20 with appropriate Linux distribution (e.g., Debian or Ubuntu for ARM).
-    2. Setup, Update and test the A20 board (install necessary packages, configure network, SSH access).
-    3. Connect MOD-IO to A20 via UEXT interface and verify connection.
-    4. Setup, update and test ADC and Relay functionality via UEXT communication using appropriate libraries (e.g., smbus for Python).
-    5. Setup the analog thermometer and calibrate ADC values to temperature readings (Celsius/Fahrenheit) - create calibration script.
-    6. Setup the Fan system (relay-controlled) and ensure physical connectivity and power supply.
-    7. Develop low-level scripts/drivers to expose hardware readings (temperature, fan state) to the Backend.
-    8. Setup the Voltage divider circuit for ADC input and verify correct voltage readings.
-    9. Implement hardware-level safety checks (e.g., emergency fan activation on high heat thresholds).
-    10. Document hardware setup procedures and troubleshooting steps.
+    [DONE] 1. Flash a SD Card for Olimex A20 with appropriate Linux distribution (e.g., Debian or Ubuntu for ARM).
+            [NOTE] Operating system is flashed on a SD card and it was successfully lauched on the A20
+    [DONE] 2. Setup, Update and test the A20 board (install necessary packages, configure network, SSH access).
+            [NOTE] Board was connected to Ethernet and all local packs were updated.
+            [NOTE] Added SSH login.
+            [NOTE] Installed Python.
+    [DONE] 3. Connect MOD-IO to A20 via UEXT interface and verify connection.
+            [NOTE] The controller was connected through UETX and it was tested throught the Relays
+    [DONE] 4. Setup, update and test ADC and Relay functionality via UEXT communication using appropriate libraries (e.g., smbus for Python).
+            [NOTE] smbus was installed and tests for reading the ADCs.
+    [WIP] 5. Setup the analog thermometer and calibrate ADC values to temperature readings (Celsius/Fahrenheit) - create calibration script.
+            [NOTE] Analog Thermometer is behaving strange at the moment. The readings are a bit low...
+    [DONE] 6. Setup the Fan system (relay-controlled) and ensure physical connectivity and power supply.
+            [NOTE] Tested with a single 12V FAN with an external Power Supply.
+            [NOTE] Test was successful, sadly the external supply cna handle single fan only
+    [WIP] 7. Develop low-level scripts/drivers to expose hardware readings (temperature, fan state) to the Backend.
+            [WIP] Reading for all ADCs. Both continuous and Single read.
+            [WIP] Reading for all Digital Inputs (IN0-IN3). Both continuous and Single.
+            [WIP] Writing for All Digital Outputs (OUT0-OUT3) 
+    [DONE] 8. Setup the Voltage divider circuit for ADC input and verify correct voltage readings.
+            [NOTE] Circuit is working correctly and it is documented.
+            [NOTE] Tested different configurations with different input Voltages.
+    [] 9. Implement hardware-level safety checks (e.g., emergency fan activation on high heat thresholds).
+    [] 10. Document hardware setup procedures and troubleshooting steps.
 ---------------------------------------------------------------------------------------
 Elena
     1. Design and implement the REST API on the A20 (using Flask, FastAPI, or Express) - choose based on performance and ease of deployment.
