@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Olimex Secure Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style> .spin { animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } } </style>
+</head>
+<body class="bg-slate-950 text-slate-100 p-5 font-mono">
+    
+    <div id="login-overlay" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-5">
+        <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 w-full max-w-sm">
+            <h2 class="text-xl font-bold mb-4 text-center">SYSTEM ACCESS</h2>
+            <input id="user" type="text" placeholder="Username" class="w-full bg-black border border-slate-700 p-3 rounded mb-3">
+            <input id="pass" type="password" placeholder="Password" class="w-full bg-black border border-slate-700 p-3 rounded mb-6">
+            <button onclick="doLogin()" class="w-full bg-blue-600 p-3 rounded font-bold hover:bg-blue-500">LOGIN</button>
+            <p id="login-err" class="text-red-500 text-xs mt-4 text-center hidden">Invalid Credentials</p>
+        </div>
+    </div>
+
+    <div class="max-w-md mx-auto space-y-4">
+        <div class="flex justify-between items-center text-[10px] text-slate-500">
+            <span>SECURE SESSION ACTIVE</span>
+            <button onclick="logout()" class="underline">LOGOUT</button>
+        </div>
+        <div id="alerts"></div>
+        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-xl font-bold uppercase tracking-tighter">Fan Control</h1>
+                <button onclick="apiCall('/mode?manual=' + (!isManual))" id="mode-btn" class="text-[10px] font-bold px-3 py-1 rounded border border-slate-700 uppercase">--</button>
+            </div>
+            <div class="bg-black/40 p-6 rounded-xl border border-slate-800 text-center mb-6">
+                <span id="temp-val" class="text-5xl font-bold text-orange-500">--°C</span>
+            </div>
+            <div class="grid grid-cols-3 gap-3 mb-6">
+                <div id="fan-0" class="bg-slate-800 p-3 rounded-xl border border-slate-700 text-center">
+                    <div id="i0" class="text-2xl mb-1">⚪</div>
+                    <button onclick="apiCall('/fans/1?on=' + (!fanStates[0]))" class="btn-m mt-2 text-[9px] bg-blue-600 px-2 py-1 rounded hidden">F1</button>
+                </div>
+                <div id="fan-1" class="bg-slate-800 p-3 rounded-xl border border-slate-700 text-center">
+                    <div id="i1" class="text-2xl mb-1">⚪</div>
+                    <button onclick="apiCall('/fans/2?on=' + (!fanStates[1]))" class="btn-m mt-2 text-[9px] bg-blue-600 px-2 py-1 rounded hidden">F2</button>
+                </div>
+                <div id="fan-2" class="bg-slate-800 p-3 rounded-xl border border-slate-700 text-center">
+                    <div id="i2" class="text-2xl mb-1">⚪</div>
+                    <button onclick="apiCall('/fans/3?on=' + (!fanStates[2]))" class="btn-m mt-2 text-[9px] bg-blue-600 px-2 py-1 rounded hidden">F3</button>
+                </div>
+            </div>
+        </div>
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 text-[11px] flex gap-2">
+            <input id="t1" class="w-full bg-black border border-slate-700 p-2 rounded">
+            <input id="t2" class="w-full bg-black border border-slate-700 p-2 rounded">
+            <input id="t3" class="w-full bg-black border border-slate-700 p-2 rounded">
+            <button onclick="saveT()" class="bg-white text-black px-4 rounded font-bold">SAVE</button>
+        </div>
+    </div>
+
+    <script>
+        const API = "http://127.0.0.1:8000";
+        let isManual = false, fanStates = [false, false, false], token = localStorage.getItem('token');
+
+        if (token) document.getElementById('login-overlay').classList.add('hidden');
+
+        async function doLogin() {
+            const formData = new FormData();
+            formData.append('username', document.getElementById('user').value);
+            formData.append('password', document.getElementById('pass').value);
+            const res = await fetch(API + '/login', { method: 'POST', body: formData });
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('token', data.access_token);
+                location.reload();
+            } else {
+                document.getElementById('login-err').classList.remove('hidden');
+            }
+        }
+
+        function logout() { localStorage.removeItem('token'); location.reload(); }
+
+        async function apiCall(path, method = 'POST', body = null) {
+            const res = await fetch(API + path, {
+                method: method,
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+                body: body ? JSON.stringify(body) : null
+            });
+            if (res.status === 401) logout();
+            refresh();
+        }
+
+        async function saveT() {
+            const vals = [parseFloat(document.getElementById('t1').value), parseFloat(document.getElementById('t2').value), parseFloat(document.getElementById('t3').value)];
+            apiCall('/thresholds', 'POST', vals);
+        }
+
+        async function refresh() {
+            try {
+                const d = await (await fetch(`${API}/status`)).json();
+                isManual = d.system_mode === "MANUAL"; fanStates = d.fans;
+                document.getElementById('mode-btn').innerText = d.system_mode;
+                document.getElementById('mode-btn').className = isManual ? "text-[10px] font-bold px-3 py-1 rounded border border-orange-500 text-orange-500" : "text-[10px] font-bold px-3 py-1 rounded border border-emerald-500 text-emerald-500";
+                document.getElementById('temp-val').innerText = d.sensor_data.temperature.toFixed(1) + "°C";
+                fanStates.forEach((s, i) => {
+                    const icon = document.getElementById(`i${i}`);
+                    icon.innerText = s ? "🌀" : "⚪";
+                    s ? icon.classList.add('spin') : icon.classList.remove('spin');
+                    document.querySelectorAll('.btn-m')[i].style.display = isManual ? "inline-block" : "none";
+                });
+                const alertZone = document.getElementById('alerts');
+                alertZone.innerHTML = d.sensor_data.power_alert ? `<div class="bg-red-600 p-3 rounded-lg text-[10px] font-bold mb-2 animate-pulse text-center">⚠️ POWER FAILURE</div>` : '';
+                if(d.sensor_data.hw_error) alertZone.innerHTML += `<div class="bg-orange-600 p-3 rounded-lg text-[10px] font-bold mb-2 text-center">🔌 HW DISCONNECT</div>`;
+                if(!document.getElementById('t1').value) { document.getElementById('t1').value = d.config.thresholds[0]; document.getElementById('t2').value = d.config.thresholds[1]; document.getElementById('t3').value = d.config.thresholds[2]; }
+            } catch (e) {}
+        }
+        setInterval(refresh, 5000); refresh();
+    </script>
+</body>
+</html>

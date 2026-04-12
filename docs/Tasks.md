@@ -25,16 +25,19 @@ Kristian
     [] 10. Document hardware setup procedures and troubleshooting steps.
 ---------------------------------------------------------------------------------------
 Elena
-    1. Design and implement the REST API on the A20 (using Flask, FastAPI, or Express) - choose based on performance and ease of deployment.
-    2. Implement logic for "Automatic" mode: Fan control based on temperature vs. stored thresholds (polling or interrupt-based).
-    3. Create API endpoints for:
-        - GET `/api/status`: Current temperature, fan state, mode, and system health.
-        - POST `/api/settings`: Update temperature thresholds, manual/auto mode, and other config.
-        - GET `/api/history`: Retrieve historical temperature data from DB with pagination.
-        - POST `/api/manual-control`: Override fan state manually.
-    4. Integrate hardware scripts provided by Kristian into the API service (handle UEXT communication securely).
-    5. Implement error handling, logging, and basic authentication for API security.
-    6. Add API documentation (e.g., using Swagger/OpenAPI).
+[Done]  1. Design and implement the REST API on the A20 (using Flask, FastAPI, or Express) - choose based on performance and ease of deployment.
+[DONE]  2. Implement logic for "Automatic" mode: Fan control based on temperature vs. stored thresholds (polling or interrupt-based).
+        3. Create API endpoints for:
+[DONE]          - GET `/api/status`: Current temperature, fan state, mode, and system health.
+[DONE]          - POST `/api/settings`: Update temperature thresholds, manual/auto mode, and other config.
+[]              - GET `/api/history`: Retrieve historical temperature data from DB with pagination.
+[DONE]          - POST `/api/manual-control`: Override fan state manually.
+[]              - Implement Voltage threshhold.
+[WIP]   4. Integrate hardware scripts provided by Kristian into the API service (handle UEXT communication securely).
+[]      5. Implement error handling, logging, and basic authentication for API security.
+[]      6. Add API documentation (e.g., using Swagger/OpenAPI).
+[DONE]  7. Create Dummy modules for unit testing.
+[]      8. Unit tests.
 ---------------------------------------------------------------------------------------
 Ivailo
     1. Design Database schema (SQLite recommended for A20 environment):
