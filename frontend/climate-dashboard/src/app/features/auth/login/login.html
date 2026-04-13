@@ -1,0 +1,53 @@
+<div class="login-page">
+  <p-card header="Climate Control Login">
+    <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
+      @if (errorMessage()) {
+        <p-message severity="error" [text]="errorMessage()"></p-message>
+      }
+
+      <div class="field">
+        <p-floatlabel>
+          <input
+            pInputText
+            id="username"
+            formControlName="username"
+            class="w-full"
+          />
+          <label for="username">Username</label>
+        </p-floatlabel>
+
+        @if (username.touched && username.invalid) {
+          <small class="error-text">Enter valid username!</small>
+        }
+      </div>
+
+      <div class="field">
+        <p-floatlabel>
+          <p-password
+            inputId="password"
+            formControlName="password"
+            [feedback]="false"
+            [toggleMask]="true"
+            styleClass="w-full"
+            inputStyleClass="w-full">
+          </p-password>
+          <label for="password">Password</label>
+        </p-floatlabel>
+
+        @if (password.touched && password.invalid) {
+          <small class="error-text">Enter valid password!</small>
+        }
+      </div>
+
+      <button
+        pButton
+        type="submit"
+        label="Sign In"
+        icon="pi pi-sign-in"
+        [loading]="loading()"
+        [disabled]="loading() || form.invalid"
+        class="w-full">
+      </button>
+    </form>
+  </p-card>
+</div>

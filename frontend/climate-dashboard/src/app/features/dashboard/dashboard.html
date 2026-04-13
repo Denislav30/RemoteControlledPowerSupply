@@ -1,0 +1,202 @@
+<div class="dashboard-page">
+  <div class="topbar">
+    <div>
+      <h1>Climate Control Dashboard</h1>
+      <p class="subtitle">Olimex A20 / MOD-IO Monitoring Panel</p>
+    </div>
+
+    <button
+      pButton
+      type="button"
+      label="Logout"
+      icon="pi pi-sign-out"
+      severity="secondary"
+      (click)="logout()">
+    </button>
+  </div>
+
+  <div class="alerts-slot">
+    @if (showHwBanner()) {
+      <div class="alert-banner alert-banner-danger">
+        <i class="pi pi-exclamation-triangle"></i>
+        <div>
+          <strong>Hardware Error / Safe State</strong>
+          <div>If a hardware communication error occurs, the system may automatically turn on all fans.</div>
+        </div>
+      </div>
+    }
+
+    @if (showPowerBanner()) {
+      <div class="alert-banner alert-banner-warning">
+        <i class="pi pi-bolt"></i>
+        <div>
+          <strong>Power Alert</strong>
+          <div>Check the 12V power supply for the fans.</div>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <p-progressSpinner></p-progressSpinner>
+      <p>Loading system status...</p>
+    </div>
+  }
+
+  @if (errorMessage()) {
+    <div class="error-box">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (status(); as s) {
+    <div class="dashboard-grid">
+      <p-card header="System Status">
+        <div class="info-row">
+          <span>Mode</span>
+          <p-tag [value]="s.system_mode" [severity]="getModeSeverity(s.system_mode)"></p-tag>
+        </div>
+
+        <div class="info-row mode-switch-row">
+          <span>Manual Control</span>
+          <p-toggleswitch
+            [ngModel]="isManualMode()"
+            (ngModelChange)="changeMode($event)"
+            [disabled]="modeUpdating()">
+          </p-toggleswitch>
+        </div>
+
+        <div class="info-row">
+          <span>Temperature</span>
+          <strong>{{ s.sensor_data.temperature }} °C</strong>
+        </div>
+
+        <div class="info-row">
+          <span>Power Supply</span>
+          <p-tag [value]="s.sensor_data.power_supply" [severity]="getPowerSeverity(s.sensor_data.power_supply)"></p-tag>
+        </div>
+
+        <div class="info-row">
+          <span>Last Update</span>
+          <strong>{{ lastUpdated() ? (lastUpdated() | date:'HH:mm:ss') : '-' }}</strong>
+        </div>
+      </p-card>
+
+      <p-card header="Fans">
+        <div class="fan-list">
+          @for (fan of s.fans; track $index) {
+            <div class="fan-item">
+              <div class="fan-info">
+                <span>{{ getFanLabel($index, fan) }}</span>
+                <small>{{ isManualMode() ? 'Manual control enabled' : 'Auto control active' }}</small>
+              </div>
+
+              <div class="fan-actions">
+                <p-tag
+                  [value]="fan ? 'Running' : 'Idle'"
+                  [severity]="fan ? 'success' : 'secondary'">
+                </p-tag>
+
+                <p-toggleswitch
+                  [ngModel]="fan"
+                  (ngModelChange)="toggleFan($index, $event)"
+                  [disabled]="!isManualMode() || fanUpdating() === $index + 1 || s.sensor_data.hw_error">
+                </p-toggleswitch>
+              </div>
+            </div>
+          }
+        </div>
+      </p-card>
+
+      <p-card header="Thresholds">
+        <form [formGroup]="thresholdsForm" (ngSubmit)="saveThresholds()" class="threshold-form">
+          <div class="threshold-grid">
+            <div class="threshold-field">
+              <label for="t1">Fan 1 Threshold</label>
+              <p-inputnumber
+                inputId="t1"
+                formControlName="t1"
+                styleClass="w-full"
+                [min]="0"
+                [max]="100"
+                [minFractionDigits]="1"
+                [maxFractionDigits]="1"
+                suffix=" °C">
+              </p-inputnumber>
+            </div>
+
+            <div class="threshold-field">
+              <label for="t2">Fan 2 Threshold</label>
+              <p-inputnumber
+                inputId="t2"
+                formControlName="t2"
+                styleClass="w-full"
+                [min]="0"
+                [max]="100"
+                [minFractionDigits]="1"
+                [maxFractionDigits]="1"
+                suffix=" °C">
+              </p-inputnumber>
+            </div>
+
+            <div class="threshold-field">
+              <label for="t3">Fan 3 Threshold</label>
+              <p-inputnumber
+                inputId="t3"
+                formControlName="t3"
+                styleClass="w-full"
+                [min]="0"
+                [max]="100"
+                [minFractionDigits]="1"
+                [maxFractionDigits]="1"
+                suffix=" °C">
+              </p-inputnumber>
+            </div>
+          </div>
+
+          <small class="helper-text">
+            Threshold values are automatically sorted in ascending order by the backend.
+          </small>
+
+          <button
+            pButton
+            type="submit"
+            label="Save Thresholds"
+            icon="pi pi-save"
+            [loading]="thresholdsSaving()"
+            [disabled]="thresholdsSaving() || thresholdsForm.invalid">
+          </button>
+        </form>
+      </p-card>
+
+      <p-card header="Alerts">
+        <div class="alert-list">
+          <div class="alert-item">
+            <span>Power Alert</span>
+            <p-tag
+              [value]="s.sensor_data.power_alert ? 'ACTIVE' : 'Normal'"
+              [severity]="s.sensor_data.power_alert ? 'danger' : 'success'">
+            </p-tag>
+          </div>
+
+          <div class="alert-item">
+            <span>Hardware Error</span>
+            <p-tag
+              [value]="s.sensor_data.hw_error ? 'ACTIVE' : 'Normal'"
+              [severity]="s.sensor_data.hw_error ? 'danger' : 'success'">
+            </p-tag>
+          </div>
+        </div>
+      </p-card>
+    </div>
+
+    <div class="chart-section">
+      <p-card header="Temperature History">
+        <div class="chart-wrapper chart-wrapper-full">
+          <p-chart type="line" [data]="chartData" [options]="chartOptions"></p-chart>
+        </div>
+      </p-card>
+    </div>
+  }
+</div>
