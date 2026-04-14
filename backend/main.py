@@ -49,7 +49,7 @@ async def verify_token(token: str = Depends(oauth2_scheme)):
 
 # --- Hardware Sync ---
 def update_hw():
-    led = "0" if state.manual_mode else "1"
+    led = "1" if state.manual_mode else "0"
     f_vals = ["1" if f else "0" for f in state.fans]
     try:
         #subprocess.check_output(["python3", "../hardware/dummy/DOUT_write.py", led, *f_vals], timeout=1)
