@@ -106,7 +106,8 @@
                     document.querySelectorAll('.btn-m')[i].style.display = isManual ? "inline-block" : "none";
                 });
                 const alertZone = document.getElementById('alerts');
-                alertZone.innerHTML = d.sensor_data.power_alert ? `<div class="bg-red-600 p-3 rounded-lg text-[10px] font-bold mb-2 animate-pulse text-center">⚠️ POWER FAILURE</div>` : '';
+                alertZone.innerHTML = `<div class="bg-blue-600 p-3 rounded-lg text-[10px] font-bold mb-2 text-center">🔋 Power Supply: ${d.sensor_data.power_supply}</div>`;
+                if(d.sensor_data.power_alert) alertZone.innerHTML += `<div class="bg-red-600 p-3 rounded-lg text-[10px] font-bold mb-2 animate-pulse text-center">⚠️ POWER FAILURE</div>`;
                 if(d.sensor_data.hw_error) alertZone.innerHTML += `<div class="bg-orange-600 p-3 rounded-lg text-[10px] font-bold mb-2 text-center">🔌 HW DISCONNECT</div>`;
                 if(!document.getElementById('t1').value) { document.getElementById('t1').value = d.config.thresholds[0]; document.getElementById('t2').value = d.config.thresholds[1]; document.getElementById('t3').value = d.config.thresholds[2]; }
             } catch (e) {}

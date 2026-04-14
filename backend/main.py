@@ -24,6 +24,7 @@ class SystemState:
         self.thresholds = [28.0, 30.0, 32.0]
         self.hysteresis = 0.5
         self.current_temp = 0.0
+        self.voltage = 0.0
         self.fan_power_ok = True
         self.hw_error = False
         self.fans = [False, False, False]
@@ -65,7 +66,8 @@ async def control_loop():
             raw = subprocess.check_output(["python3", "../hardware/real/ADC_read.py"], text=True, timeout=1).strip()
             state.hw_error = False
             t, v = map(float, raw.split(','))
-            state.current_temp, state.fan_power_ok = t, v > 10.0
+            state.current_temp, state.voltage = t, v
+            state.fan_power_ok = v > 10.0
             if not state.manual_mode:
                 for i in range(3):
                     if not state.fans[i] and t >= state.thresholds[i]: state.fans[i] = True
@@ -92,7 +94,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 def get_status():
     return {
         "system_mode": "MANUAL" if state.manual_mode else "AUTO",
-        "sensor_data": {"temperature": state.current_temp, "power_supply": "OK" if state.fan_power_ok else "LOW", "power_alert": (any(state.fans) and not state.fan_power_ok), "hw_error": state.hw_error},
+        "sensor_data": {"temperature": state.current_temp, "power_supply": f"{state.voltage:.1f}V", "power_alert": (any(state.fans) and not state.fan_power_ok), "hw_error": state.hw_error},
         "fans": state.fans,
         "config": {"thresholds": state.thresholds}
     }
