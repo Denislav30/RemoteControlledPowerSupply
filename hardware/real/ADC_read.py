@@ -18,8 +18,8 @@ try:
     raw_volt = read_modio_adc(1)
     
     # Scaling (Example: 10-bit 3.3V ref or 10V divider - adjust to your sensors)
-    temp = round((raw_temp * 3.3 / 1023) * 10, 2) 
-    voltage = round((raw_volt * 3.3 / 1023) * 4, 2)
+    temp = round((raw_temp * 3.3 / 255) * 10, 2) 
+    voltage = round((raw_volt * 3.3 / 255) * 4, 2)
 
     print(f"{temp},{voltage}")
 except Exception:
