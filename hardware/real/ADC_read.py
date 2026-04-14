@@ -3,45 +3,27 @@ import time
 
 # Mod-IO I2C адрес
 ADDRESS = 0x58
-bus = smbus2.SMBus(1)
+bus = smbus2.SMBus(1)    
 
-def read_modio_adc_raw(channel):
-    """Изпълнява алгоритъма на Olimex за четене на сурови данни."""
+def read_analog_simple(channel_cmd):
     try:
-        reg = 0x30 + channel
+        reg = 0x30 + channel_cmd
         bus.write_byte(ADDRESS, reg)
-        time.sleep(0.05)
-        
+        time.sleep(0.1)
         data = bus.read_i2c_block_data(ADDRESS, reg, 2)
-        l_byte = data[0]
-        h_byte = data[1]
+        raw_value = (data[1] << 8) | data[0]
         
-        # Bit Reversal на Low Byte (от първия файл)
-        analog = 0
-        temp_l = l_byte
-        for index in range(8):
-            bit = 1 if (temp_l & 0x80) else 0
-            analog |= (bit << index)
-            temp_l = (temp_l << 1) & 0xFF
-            
-        # Мапиране на High Byte (от първия файл)
-        if h_byte & 0x02:
-            analog |= (1 << 8)
-        if h_byte & 0x01:
-            analog |= (1 << 9)
-            
-        return analog
-    except Exception:
-        return None
+        voltage = (raw_value * 3.3) / 1023
+        return raw_value, voltage
+    except:
+        return None, None
 
 def get_safe_adc(channel, retries=3):
-    """Проверява дали стойността е валидна (< 1024) и опитва отново при грешка."""
     for _ in range(retries):
-        raw = read_modio_adc_raw(channel)
+        raw, voltage = read_analog_simple(channel)
         
-        # Проверка: стойността трябва да е число и да е в границите на 10 бита
         if raw is not None and raw < 1024:
-            return raw
+            return voltage
         
         # Ако данните са грешни, изчакваме малко и опитваме пак
         time.sleep(0.1)
@@ -50,20 +32,16 @@ def get_safe_adc(channel, retries=3):
 
 try:
     # Опитваме се да прочетем двата канала безопасно
-    raw_0 = get_safe_adc(0)
-    raw_1 = get_safe_adc(1)
+    voltage_0 = get_safe_adc(0)
+    voltage_1 = get_safe_adc(1)
     
     # Ако след опитите все още нямаме валидни данни, прекратяваме
-    if raw_0 is None or raw_1 is None:
+    if voltage_0 is None or voltage_1 is None:
         raise ValueError("Invalid data or I2C error")
 
-    # Изчисляване на напрежението (0-3.3V)
-    v_base_0 = (raw_0 * 3.3) / 1023
-    v_base_1 = (raw_1 * 3.3) / 1023
-
-    # Скалиране според твоите нужди (x10 и x4)
-    temp = round(v_base_0 * 10, 2) 
-    voltage = round(v_base_1 * 4, 2)
+    temp = (voltage_0/0.01) - 273.15
+    
+    voltage = voltage_1
 
     # Краен изход
     print(f"{temp},{voltage}")
