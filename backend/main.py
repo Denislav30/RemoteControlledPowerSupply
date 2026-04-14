@@ -52,7 +52,8 @@ def update_hw():
     led = "0" if state.manual_mode else "1"
     f_vals = ["1" if f else "0" for f in state.fans]
     try:
-        subprocess.check_output(["python3", "../hardware/dummy/DOUT_write.py", led, *f_vals], timeout=1)
+        #subprocess.check_output(["python3", "../hardware/dummy/DOUT_write.py", led, *f_vals], timeout=1)
+        subprocess.check_output(["python3", "../hardware/real/DOUT_write.py", led, *f_vals], timeout=1)
         state.hw_error = False
     except:
         state.hw_error = True
@@ -60,7 +61,8 @@ def update_hw():
 async def control_loop():
     while True:
         try:
-            raw = subprocess.check_output(["python3", "../hardware/dummy/ADC_read.py"], text=True, timeout=1).strip()
+            #raw = subprocess.check_output(["python3", "../hardware/dummy/ADC_read.py"], text=True, timeout=1).strip()
+            raw = subprocess.check_output(["python3", "../hardware/real/ADC_read.py"], text=True, timeout=1).strip()
             state.hw_error = False
             t, v = map(float, raw.split(','))
             state.current_temp, state.fan_power_ok = t, v > 10.0
