@@ -66,8 +66,8 @@ async def control_loop():
             raw = subprocess.check_output(["python3", "../hardware/real/ADC_read.py"], text=True, timeout=1).strip()
             state.hw_error = False
             t, v = map(float, raw.split(','))
-            state.current_temp, state.voltage = t, v
-            state.fan_power_ok = v > 10.0
+            state.current_temp, state.voltage = t, v * 4.3
+            state.fan_power_ok = (v * 4.3) > 10.0
             if not state.manual_mode:
                 for i in range(3):
                     if not state.fans[i] and t >= state.thresholds[i]: state.fans[i] = True
