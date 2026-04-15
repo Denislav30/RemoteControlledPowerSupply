@@ -9,20 +9,20 @@ Kristian
             [NOTE] The controller was connected through UETX and it was tested throught the Relays
     [DONE] 4. Setup, update and test ADC and Relay functionality via UEXT communication using appropriate libraries (e.g., smbus for Python).
             [NOTE] smbus was installed and tests for reading the ADCs.
-    [WIP] 5. Setup the analog thermometer and calibrate ADC values to temperature readings (Celsius/Fahrenheit) - create calibration script.
+    [DONE] 5. Setup the analog thermometer and calibrate ADC values to temperature readings (Celsius/Fahrenheit) - create calibration script.
             [NOTE] Analog Thermometer is behaving strange at the moment. The readings are a bit low...
     [DONE] 6. Setup the Fan system (relay-controlled) and ensure physical connectivity and power supply.
             [NOTE] Tested with a single 12V FAN with an external Power Supply.
             [NOTE] Test was successful, sadly the external supply cna handle single fan only
-    [WIP] 7. Develop low-level scripts/drivers to expose hardware readings (temperature, fan state) to the Backend.
+    [DONE] 7. Develop low-level scripts/drivers to expose hardware readings (temperature, fan state) to the Backend.
             [WIP] Reading for all ADCs. Both continuous and Single read.
             [WIP] Reading for all Digital Inputs (IN0-IN3). Both continuous and Single.
             [WIP] Writing for All Digital Outputs (OUT0-OUT3) 
     [DONE] 8. Setup the Voltage divider circuit for ADC input and verify correct voltage readings.
             [NOTE] Circuit is working correctly and it is documented.
             [NOTE] Tested different configurations with different input Voltages.
-    [] 9. Implement hardware-level safety checks (e.g., emergency fan activation on high heat thresholds).
-    [] 10. Document hardware setup procedures and troubleshooting steps.
+    [DOME] 9. Implement hardware-level safety checks (e.g., emergency fan activation on high heat thresholds).
+    [KINDA-DONE] 10. Document hardware setup procedures and troubleshooting steps.
 ---------------------------------------------------------------------------------------
 Elena
 [Done]  1. Design and implement the REST API on the A20 (using Flask, FastAPI, or Express) - choose based on performance and ease of deployment.
@@ -40,14 +40,14 @@ Elena
 []      8. Unit tests.
 ---------------------------------------------------------------------------------------
 Ivailo
-    1. Design Database schema (SQLite recommended for A20 environment):
-        - Table `config`: Store thresholds (min_temp, max_temp), mode (auto/manual), fan_override.
-        - Table `logs`: Store periodic temperature readings (timestamp, temp), fan toggle events (timestamp, state, reason).
-        - Table `system_health`: Store system status and error logs.
-    2. Implement data persistence layer for the Backend (ORM or direct SQL queries).
-    3. Sync with Denislav to ensure data structure supports frontend graphs/history (e.g., time-series data).
-    4. Implement database migrations and backup/restore functionality.
-    5. Optimize database for low-resource environment (A20 constraints).
+         1. Design Database schema (SQLite recommended for A20 environment):
+                - Table `config`: Store thresholds (min_temp, max_temp), mode (auto/manual), fan_override.
+                - Table `logs`: Store periodic temperature readings (timestamp, temp), fan toggle events (timestamp, state, reason).
+                - Table `system_health`: Store system status and error logs.
+         2. Implement data persistence layer for the Backend (ORM or direct SQL queries).
+         3. Sync with Denislav to ensure data structure supports frontend graphs/history (e.g., time-series data).
+         4. Implement database migrations and backup/restore functionality.
+[Prio 3] 5. Optimize database for low-resource environment (A20 constraints).
 ---------------------------------------------------------------------------------------
 Denislav
     1. Design and develop a responsive Web Dashboard (React, Vue.js or similar) for mobile and desktop.
