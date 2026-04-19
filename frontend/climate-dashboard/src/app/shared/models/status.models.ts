@@ -1,8 +1,7 @@
 export interface SensorData {
   temperature: number;
-  power_supply: string;
+  power_supply: number | string;
   power_alert: boolean;
-  hw_error: boolean;
 }
 
 export interface ConfigData {

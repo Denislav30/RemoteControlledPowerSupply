@@ -16,16 +16,6 @@
   </div>
 
   <div class="alerts-slot">
-    @if (showHwBanner()) {
-      <div class="alert-banner alert-banner-danger">
-        <i class="pi pi-exclamation-triangle"></i>
-        <div>
-          <strong>Hardware Error / Safe State</strong>
-          <div>If a hardware communication error occurs, the system may automatically turn on all fans.</div>
-        </div>
-      </div>
-    }
-
     @if (showPowerBanner()) {
       <div class="alert-banner alert-banner-warning">
         <i class="pi pi-bolt"></i>
@@ -55,7 +45,10 @@
       <p-card header="System Status">
         <div class="info-row">
           <span>Mode</span>
-          <p-tag [value]="s.system_mode" [severity]="getModeSeverity(s.system_mode)"></p-tag>
+          <p-tag
+            [value]="s.system_mode"
+            [severity]="getModeSeverity(s.system_mode)">
+          </p-tag>
         </div>
 
         <div class="info-row mode-switch-row">
@@ -74,7 +67,10 @@
 
         <div class="info-row">
           <span>Power Supply</span>
-          <p-tag [value]="s.sensor_data.power_supply" [severity]="getPowerSeverity(s.sensor_data.power_supply)"></p-tag>
+          <p-tag
+            [value]="getPowerSupplyText()"
+            [severity]="getPowerSupplySeverity()">
+          </p-tag>
         </div>
 
         <div class="info-row">
@@ -101,7 +97,7 @@
                 <p-toggleswitch
                   [ngModel]="fan"
                   (ngModelChange)="toggleFan($index, $event)"
-                  [disabled]="!isManualMode() || fanUpdating() === $index + 1 || s.sensor_data.hw_error">
+                  [disabled]="!isManualMode() || fanUpdating() === $index + 1">
                 </p-toggleswitch>
               </div>
             </div>
@@ -110,7 +106,11 @@
       </p-card>
 
       <p-card header="Thresholds">
-        <form [formGroup]="thresholdsForm" (ngSubmit)="saveThresholds()" class="threshold-form">
+        <form
+          [formGroup]="thresholdsForm"
+          (ngSubmit)="saveThresholds()"
+          class="threshold-form">
+
           <div class="threshold-grid">
             <div class="threshold-field">
               <label for="t1">Fan 1 Threshold</label>
@@ -179,22 +179,18 @@
               [severity]="s.sensor_data.power_alert ? 'danger' : 'success'">
             </p-tag>
           </div>
-
-          <div class="alert-item">
-            <span>Hardware Error</span>
-            <p-tag
-              [value]="s.sensor_data.hw_error ? 'ACTIVE' : 'Normal'"
-              [severity]="s.sensor_data.hw_error ? 'danger' : 'success'">
-            </p-tag>
-          </div>
         </div>
       </p-card>
     </div>
 
     <div class="chart-section">
-      <p-card header="Temperature History">
+      <p-card header="Temperature & Power Supply History">
         <div class="chart-wrapper chart-wrapper-full">
-          <p-chart type="line" [data]="chartData" [options]="chartOptions"></p-chart>
+          <p-chart
+            type="line"
+            [data]="chartData"
+            [options]="chartOptions">
+          </p-chart>
         </div>
       </p-card>
     </div>

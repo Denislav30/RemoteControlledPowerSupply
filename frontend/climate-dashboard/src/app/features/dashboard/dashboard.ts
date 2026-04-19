@@ -21,9 +21,10 @@ import { StatusResponse } from '../../shared/models/status.models';
 
 type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
 
-interface TempPoint {
+interface HistoryPoint {
   timeLabel: string;
-  value: number;
+  temperature: number;
+  powerSupply: number | null;
 }
 
 @Component({
@@ -62,7 +63,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly fanUpdating = signal<number | null>(null);
   readonly thresholdsSaving = signal(false);
 
-  readonly showHwBanner = signal(false);
   readonly showPowerBanner = signal(false);
 
   readonly thresholdsForm = this.fb.nonNullable.group({
@@ -72,7 +72,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   });
 
   private readonly maxHistoryPoints = 20;
-  private readonly temperatureHistory: TempPoint[] = [];
+  private readonly history: HistoryPoint[] = [];
 
   chartData: any = {
     labels: [],
@@ -81,7 +81,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
         label: 'Temperature (°C)',
         data: [],
         tension: 0.3,
-        fill: false
+        fill: false,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Power Supply (V)',
+        data: [],
+        tension: 0.3,
+        fill: false,
+        yAxisID: 'y1'
       }
     ]
   };
@@ -89,6 +97,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   chartOptions: any = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false
+    },
     plugins: {
       legend: {
         display: true
@@ -96,7 +108,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
     },
     scales: {
       y: {
-        beginAtZero: false
+        type: 'linear',
+        position: 'left',
+        title: {
+          display: true,
+          text: 'Temperature (°C)'
+        }
+      },
+      y1: {
+        type: 'linear',
+        position: 'right',
+        title: {
+          display: true,
+          text: 'Power Supply (V)'
+        },
+        grid: {
+          drawOnChartArea: false
+        }
       }
     }
   };
@@ -126,7 +154,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             { emitEvent: false }
           );
 
-          this.pushTemperaturePoint(response.sensor_data.temperature);
+          this.pushHistoryPoint(response);
           this.handleAlerts(previous, response);
         },
         error: () => {
@@ -158,6 +186,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           const current = this.status();
+
           if (current) {
             this.status.set({
               ...current,
@@ -175,7 +204,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.messageService.add({
             severity: 'error',
             summary: 'Mode update failed',
-            detail: 'Failed mode change.'
+            detail: 'Failed to update system mode.'
           });
         }
       });
@@ -186,7 +215,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.messageService.add({
         severity: 'warn',
         summary: 'Manual mode required',
-        detail: 'The fans can only be controlled in MANUAL mode.'
+        detail: 'Fans can be controlled only in MANUAL mode.'
       });
       return;
     }
@@ -218,8 +247,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         error: (err) => {
           const detail =
             err?.status === 403
-              ? 'Backend refuses fan control outside of MANUAL mode.'
-              : 'Failed command to the fan.';
+              ? 'Backend rejects fan control outside MANUAL mode.'
+              : 'Failed to send fan command.';
 
           this.messageService.add({
             severity: 'error',
@@ -246,6 +275,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           const current = this.status();
+
           if (current) {
             this.status.set({
               ...current,
@@ -280,65 +310,82 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return mode === 'AUTO' ? 'success' : 'warn';
   }
 
-  getPowerSeverity(power: string): TagSeverity {
-    return power === 'OK' ? 'success' : 'danger';
+  getPowerSupplySeverity(): TagSeverity {
+    const powerSupply = this.getPowerSupplyNumber();
+
+    if (powerSupply === null) {
+      return 'secondary';
+    }
+
+    return powerSupply > 10 ? 'success' : 'danger';
   }
 
-  private pushTemperaturePoint(temp: number): void {
+  getPowerSupplyText(): string {
+    const powerSupply = this.getPowerSupplyNumber();
+
+    if (powerSupply === null) {
+      return 'N/A';
+    }
+
+    return `${powerSupply.toFixed(2)} V`;
+  }
+
+  private pushHistoryPoint(response: StatusResponse): void {
     const now = new Date();
+
     const label = now.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit'
     });
 
-    this.temperatureHistory.push({
+    const powerSupply = this.parsePowerSupply(response.sensor_data.power_supply);
+
+    this.history.push({
       timeLabel: label,
-      value: temp
+      temperature: response.sensor_data.temperature,
+      powerSupply
     });
 
-    if (this.temperatureHistory.length > this.maxHistoryPoints) {
-      this.temperatureHistory.shift();
+    if (this.history.length > this.maxHistoryPoints) {
+      this.history.shift();
     }
 
     this.chartData = {
-      labels: this.temperatureHistory.map(point => point.timeLabel),
+      labels: this.history.map(point => point.timeLabel),
       datasets: [
         {
           label: 'Temperature (°C)',
-          data: this.temperatureHistory.map(point => point.value),
+          data: this.history.map(point => point.temperature),
           tension: 0.3,
-          fill: false
+          fill: false,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Power Supply (V)',
+          data: this.history.map(point => point.powerSupply),
+          tension: 0.3,
+          fill: false,
+          yAxisID: 'y1'
         }
       ]
     };
   }
 
   private handleAlerts(previous: StatusResponse | null, current: StatusResponse): void {
-    const prevHwError = previous?.sensor_data.hw_error ?? false;
     const prevPowerAlert = previous?.sensor_data.power_alert ?? false;
     const prevTemp = previous?.sensor_data.temperature ?? null;
 
-    const currentHwError = current.sensor_data.hw_error;
     const currentPowerAlert = current.sensor_data.power_alert;
     const currentTemp = current.sensor_data.temperature;
 
-    this.showHwBanner.set(currentHwError);
     this.showPowerBanner.set(currentPowerAlert);
-
-    if (!prevHwError && currentHwError) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Hardware error',
-        detail: 'The system is in HW ERROR / safe state.'
-      });
-    }
 
     if (!prevPowerAlert && currentPowerAlert) {
       this.messageService.add({
         severity: 'error',
         summary: 'Power alert',
-        detail: 'A problem has been detected with the power supply to the fans.'
+        detail: 'Problem detected with the fan power supply.'
       });
     }
 
@@ -346,8 +393,35 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.messageService.add({
         severity: 'warn',
         summary: 'High temperature',
-        detail: `The temperature reached ${currentTemp} °C`
+        detail: `Temperature reached ${currentTemp} °C`
       });
     }
+  }
+
+  private getPowerSupplyNumber(): number | null {
+    const current = this.status();
+
+    if (!current) {
+      return null;
+    }
+
+    return this.parsePowerSupply(current.sensor_data.power_supply);
+  }
+
+  private parsePowerSupply(value: number | string): number | null {
+    if (typeof value === 'number') {
+      return value;
+    }
+
+    const normalized = value.replace(',', '.');
+    const match = normalized.match(/-?\d+(\.\d+)?/);
+
+    if (!match) {
+      return null;
+    }
+
+    const parsed = Number(match[0]);
+
+    return Number.isFinite(parsed) ? parsed : null;
   }
 }

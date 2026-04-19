@@ -13,15 +13,23 @@ export class ControlService {
 
   setMode(manual: boolean): Observable<void> {
     const params = new HttpParams().set('manual', manual);
+
     return this.http.post<void>(`${this.apiUrl}/mode`, null, { params });
   }
 
   setFan(fanId: number, on: boolean): Observable<void> {
     const params = new HttpParams().set('on', on);
+
     return this.http.post<void>(`${this.apiUrl}/fans/${fanId}`, null, { params });
   }
 
   setThresholds(thresholds: number[]): Observable<{ status: string }> {
-    return this.http.post<{ status: string }>(`${this.apiUrl}/thresholds`, thresholds);
+    let params = new HttpParams();
+
+    thresholds.forEach((value) => {
+      params = params.append('t', value);
+    });
+
+    return this.http.post<{ status: string }>(`${this.apiUrl}/thresholds`, null, { params });
   }
 }

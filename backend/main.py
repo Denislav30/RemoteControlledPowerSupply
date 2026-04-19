@@ -7,6 +7,8 @@ from pydantic import BaseModel
 from typing import List
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
+from fastapi.responses import FileResponse
+from pathlib import Path
 
 # --- Security Config ---
 SECRET_KEY = "olimex_secret_key_change_this"
@@ -117,3 +119,14 @@ def set_thresholds(t: List[float], user: str = Depends(verify_token)):
         state.thresholds = sorted(t)
         return {"status": "ok"}
     raise HTTPException(status_code=400)
+
+FRONTEND_DIR = Path(__file__).parent / "frontend"
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def serve_frontend(full_path: str):
+    requested_path = FRONTEND_DIR / full_path
+
+    if full_path and requested_path.exists() and requested_path.is_file():
+        return FileResponse(requested_path)
+
+    return FileResponse(FRONTEND_DIR / "index.html")
