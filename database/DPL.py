@@ -206,3 +206,5 @@ def restore_db(filename): #restore the database with integrity check using HMAC 
         src_conn.backup(dst_conn)
     dst_conn.close()
     src_conn.close()
+    
+    return {"status": "success", "message": "Database restored successfully"}

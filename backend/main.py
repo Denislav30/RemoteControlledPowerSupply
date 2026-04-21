@@ -1,5 +1,7 @@
 import asyncio
 import subprocess
+import sys
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -8,7 +10,13 @@ from typing import List
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from fastapi.responses import FileResponse
-from pathlib import Path
+
+# Import DPL for database logging
+sys.path.insert(0, str(Path(__file__).parent.parent / "database"))
+try:
+    import DPL
+except ImportError:
+    DPL = None
 
 # --- Security Config ---
 SECRET_KEY = "olimex_secret_key_change_this"
@@ -55,8 +63,8 @@ def update_hw():
     led = "1" if state.manual_mode else "0"
     f_vals = ["1" if f else "0" for f in state.fans]
     try:
-        #subprocess.check_output(["python3", "../hardware/dummy/DOUT_write.py", led, *f_vals], timeout=1)
-        subprocess.check_output(["python3", "../hardware/real/DOUT_write.py", led, *f_vals], timeout=1)
+        subprocess.check_output([sys.executable, "../hardware/dummy/DOUT_write.py", led, *f_vals], timeout=1)
+        #subprocess.check_output([sys.executable, "../hardware/real/DOUT_write.py", led, *f_vals], timeout=1)
         state.hw_error = False
     except:
         state.hw_error = True
@@ -64,8 +72,8 @@ def update_hw():
 async def control_loop():
     while True:
         try:
-            #raw = subprocess.check_output(["python3", "../hardware/dummy/ADC_read.py"], text=True, timeout=1).strip()
-            raw = subprocess.check_output(["python3", "../hardware/real/ADC_read.py"], text=True, timeout=1).strip()
+            raw = subprocess.check_output([sys.executable, "../hardware/dummy/ADC_read.py"], text=True, timeout=1).strip()
+            #raw = subprocess.check_output([sys.executable, "../hardware/real/ADC_read.py"], text=True, timeout=1).strip()
             state.hw_error = False
             t, v = map(float, raw.split(','))
             state.current_temp, state.voltage = t, v * 4.3
@@ -75,13 +83,22 @@ async def control_loop():
                     if not state.fans[i] and t >= state.thresholds[i]: state.fans[i] = True
                     elif state.fans[i] and t <= (state.thresholds[i] - state.hysteresis): state.fans[i] = False
                 update_hw()
+            
+            # Log data to database
+            if DPL:
+                reason = "manual" if state.manual_mode else "auto"
+                DPL.insert_log(state.current_temp, state.fans, reason)
+                DPL.insert_health(state.voltage, int(state.fan_power_ok), int(state.hw_error))
         except:
             state.hw_error = True
             state.fans = [True, True, True]
         await asyncio.sleep(2)
 
 @app.on_event("startup")
-async def startup(): asyncio.create_task(control_loop())
+async def startup():
+    if DPL:
+        DPL.init_db()
+    asyncio.create_task(control_loop())
 
 # --- Auth Endpoint ---
 @app.post("/login")

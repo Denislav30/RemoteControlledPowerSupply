@@ -46,7 +46,7 @@ Ivailo
                 - Table `system_health`: Store system status and error logs.
          2. Implement data persistence layer for the Backend (ORM or direct SQL queries).
          3. Sync with Denislav to ensure data structure supports frontend graphs/history (e.g., time-series data).
-         4. Implement database migrations and backup/restore functionality.
+[Prio 2] 4. Implement database migrations and backup/restore functionality.
 [Prio 3] 5. Optimize database for low-resource environment (A20 constraints).
 ---------------------------------------------------------------------------------------
 Denislav
