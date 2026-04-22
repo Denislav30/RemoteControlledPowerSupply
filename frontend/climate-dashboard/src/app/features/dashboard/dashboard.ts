@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { interval, Subject, switchMap, startWith, takeUntil, finalize } from 'rxjs';
+import { catchError, finalize, forkJoin, interval, of, startWith, Subject, switchMap, takeUntil} from 'rxjs';
 
 import { CardModule } from 'primeng/card';
 import { TagModule } from 'primeng/tag';
@@ -17,31 +17,25 @@ import { MessageService } from 'primeng/api';
 import { AuthService } from '../../core/services/auth.service';
 import { StatusService } from '../../core/services/status.service';
 import { ControlService } from '../../core/services/control.service';
+import { HistoryService } from '../../core/services/history.service';
+
 import { StatusResponse } from '../../shared/models/status.models';
+import { HealthHistoryResponse, TemperatureHistoryResponse
+} from '../../shared/models/history.models';
 
 type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
 
 interface HistoryPoint {
+  timestamp: string;
   timeLabel: string;
-  temperature: number;
+  temperature: number | null;
   powerSupply: number | null;
 }
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    ReactiveFormsModule,
-    CardModule,
-    TagModule,
-    ProgressSpinnerModule,
-    ButtonModule,
-    InputNumberModule,
-    ToggleSwitchModule,
-    ChartModule
-  ],
+  imports: [ CommonModule, FormsModule, ReactiveFormsModule, CardModule, TagModule, ProgressSpinnerModule, ButtonModule, InputNumberModule, ToggleSwitchModule, ChartModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css'
 })
@@ -49,6 +43,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly statusService = inject(StatusService);
   private readonly controlService = inject(ControlService);
+  private readonly historyService = inject(HistoryService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly messageService = inject(MessageService);
@@ -82,14 +77,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
         data: [],
         tension: 0.3,
         fill: false,
-        yAxisID: 'y'
+        yAxisID: 'y',
+        spanGaps: true
       },
       {
         label: 'Power Supply (V)',
         data: [],
         tension: 0.3,
         fill: false,
-        yAxisID: 'y1'
+        yAxisID: 'y1',
+        spanGaps: true
       }
     ]
   };
@@ -130,38 +127,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   };
 
   ngOnInit(): void {
-    interval(2000)
-      .pipe(
-        startWith(0),
-        switchMap(() => this.statusService.getStatus()),
-        takeUntil(this.destroy$)
-      )
-      .subscribe({
-        next: (response) => {
-          const previous = this.status();
-
-          this.status.set(response);
-          this.lastUpdated.set(new Date());
-          this.loading.set(false);
-          this.errorMessage.set('');
-
-          this.thresholdsForm.patchValue(
-            {
-              t1: response.config.thresholds[0] ?? 28,
-              t2: response.config.thresholds[1] ?? 30,
-              t3: response.config.thresholds[2] ?? 32
-            },
-            { emitEvent: false }
-          );
-
-          this.pushHistoryPoint(response);
-          this.handleAlerts(previous, response);
-        },
-        error: () => {
-          this.loading.set(false);
-          this.errorMessage.set('Failed connection to the server.');
-        }
-      });
+    this.loadInitialHistory();
+    this.startLiveStatusPolling();
   }
 
   ngOnDestroy(): void {
@@ -274,6 +241,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .pipe(finalize(() => this.thresholdsSaving.set(false)))
       .subscribe({
         next: () => {
+          const sortedThresholds = [...thresholds].sort((a, b) => a - b);
           const current = this.status();
 
           if (current) {
@@ -281,10 +249,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
               ...current,
               config: {
                 ...current.config,
-                thresholds: [...thresholds].sort((a, b) => a - b)
+                thresholds: sortedThresholds
               }
             });
           }
+
+          this.thresholdsForm.patchValue(
+            {
+              t1: sortedThresholds[0],
+              t2: sortedThresholds[1],
+              t3: sortedThresholds[2]
+            },
+            { emitEvent: false }
+          );
+
+          this.thresholdsForm.markAsPristine();
 
           this.messageService.add({
             severity: 'success',
@@ -324,33 +303,142 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const powerSupply = this.getPowerSupplyNumber();
 
     if (powerSupply === null) {
+      const raw = this.status()?.sensor_data.power_supply;
+
+      if (typeof raw === 'string' && raw.trim().length > 0) {
+        return raw;
+      }
+
       return 'N/A';
     }
 
     return `${powerSupply.toFixed(2)} V`;
   }
 
-  private pushHistoryPoint(response: StatusResponse): void {
+  private loadInitialHistory(): void {
+    forkJoin({
+      temperature: this.historyService.getTemperatureHistory().pipe(
+        catchError(() => of<TemperatureHistoryResponse>({ data: [] }))
+      ),
+      health: this.historyService.getHealthHistory().pipe(
+        catchError(() => of<HealthHistoryResponse>({ data: [] }))
+      )
+    })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(({ temperature, health }) => {
+        this.buildChartFromDatabaseHistory(temperature, health);
+      });
+  }
+
+  private startLiveStatusPolling(): void {
+    interval(2000)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.statusService.getStatus()),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (response) => {
+          const previous = this.status();
+
+          this.status.set(response);
+          this.lastUpdated.set(new Date());
+          this.loading.set(false);
+          this.errorMessage.set('');
+
+          if (!this.thresholdsForm.dirty) {
+            this.thresholdsForm.patchValue(
+              {
+                t1: response.config.thresholds[0] ?? 28,
+                t2: response.config.thresholds[1] ?? 30,
+                t3: response.config.thresholds[2] ?? 32
+              },
+              { emitEvent: false }
+            );
+          }
+
+          this.pushLiveHistoryPoint(response);
+          this.handleAlerts(previous, response);
+        },
+        error: () => {
+          this.loading.set(false);
+          this.errorMessage.set('Failed connection to the server.');
+        }
+      });
+  }
+
+  private buildChartFromDatabaseHistory(
+    temperatureResponse: TemperatureHistoryResponse,
+    healthResponse: HealthHistoryResponse
+  ): void {
+    const temperatureRows = temperatureResponse.data
+      .slice(0, this.maxHistoryPoints)
+      .reverse();
+
+    const healthRows = healthResponse.data
+      .slice(0, this.maxHistoryPoints)
+      .reverse();
+
+    const pointsByTimestamp = new Map<string, HistoryPoint>();
+
+    for (const row of temperatureRows) {
+      const timestamp = row[6];
+
+      pointsByTimestamp.set(timestamp, {
+        timestamp,
+        timeLabel: this.formatTimeLabel(timestamp),
+        temperature: row[1],
+        powerSupply: null
+      });
+    }
+
+    for (const row of healthRows) {
+      const timestamp = row[4];
+      const existing = pointsByTimestamp.get(timestamp);
+
+      if (existing) {
+        existing.powerSupply = row[1];
+      } else {
+        pointsByTimestamp.set(timestamp, {
+          timestamp,
+          timeLabel: this.formatTimeLabel(timestamp),
+          temperature: null,
+          powerSupply: row[1]
+        });
+      }
+    }
+
+    const sortedPoints = Array.from(pointsByTimestamp.values())
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      .slice(-this.maxHistoryPoints);
+
+    this.history.length = 0;
+    this.history.push(...sortedPoints);
+
+    this.refreshChartData();
+  }
+
+  private pushLiveHistoryPoint(response: StatusResponse): void {
     const now = new Date();
+    const timestamp = now.toISOString();
 
-    const label = now.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-
-    const powerSupply = this.parsePowerSupply(response.sensor_data.power_supply);
-
-    this.history.push({
-      timeLabel: label,
+    const point: HistoryPoint = {
+      timestamp,
+      timeLabel: this.formatTimeLabel(timestamp),
       temperature: response.sensor_data.temperature,
-      powerSupply
-    });
+      powerSupply: this.parsePowerSupply(response.sensor_data.power_supply)
+    };
+
+    this.history.push(point);
 
     if (this.history.length > this.maxHistoryPoints) {
       this.history.shift();
     }
 
+    this.refreshChartData();
+  }
+
+  private refreshChartData(): void {
     this.chartData = {
       labels: this.history.map(point => point.timeLabel),
       datasets: [
@@ -359,35 +447,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
           data: this.history.map(point => point.temperature),
           tension: 0.3,
           fill: false,
-          yAxisID: 'y'
+          yAxisID: 'y',
+          spanGaps: true
         },
         {
           label: 'Power Supply (V)',
           data: this.history.map(point => point.powerSupply),
           tension: 0.3,
           fill: false,
-          yAxisID: 'y1'
+          yAxisID: 'y1',
+          spanGaps: true
         }
       ]
     };
   }
 
   private handleAlerts(previous: StatusResponse | null, current: StatusResponse): void {
-    const prevPowerAlert = previous?.sensor_data.power_alert ?? false;
     const prevTemp = previous?.sensor_data.temperature ?? null;
-
-    const currentPowerAlert = current.sensor_data.power_alert;
     const currentTemp = current.sensor_data.temperature;
+    const currentPowerAlert = current.sensor_data.power_alert;
 
     this.showPowerBanner.set(currentPowerAlert);
-
-    if (!prevPowerAlert && currentPowerAlert) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Power alert',
-        detail: 'Problem detected with the fan power supply.'
-      });
-    }
 
     if ((prevTemp === null || prevTemp < 32) && currentTemp >= 32) {
       this.messageService.add({
@@ -410,7 +490,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private parsePowerSupply(value: number | string): number | null {
     if (typeof value === 'number') {
-      return value;
+      return Number.isFinite(value) ? value : null;
     }
 
     const normalized = value.replace(',', '.');
@@ -423,5 +503,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const parsed = Number(match[0]);
 
     return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private formatTimeLabel(timestamp: string): string {
+    const normalized = timestamp.includes('T')
+      ? timestamp
+      : timestamp.replace(' ', 'T');
+
+    const date = new Date(normalized);
+
+    if (Number.isNaN(date.getTime())) {
+      return timestamp;
+    }
+
+    return date.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
   }
 }

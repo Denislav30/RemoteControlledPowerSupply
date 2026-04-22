@@ -12,3 +12,20 @@ html, body {
 * {
   box-sizing: border-box;
 }
+
+.app-toast {
+  z-index: 5000 !important;
+}
+
+.p-toast {
+  z-index: 5000 !important;
+}
+
+.p-toast-top-right {
+  top: 1rem !important;
+  right: 1rem !important;
+}
+
+.p-toast-message {
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+}

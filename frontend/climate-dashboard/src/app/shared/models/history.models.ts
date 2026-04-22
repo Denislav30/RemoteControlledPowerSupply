@@ -1,4 +1,4 @@
-export type LogRow = [
+export type TemperatureHistoryRow = [
   id: number,
   temperature: number,
   fan1: number,
@@ -8,7 +8,7 @@ export type LogRow = [
   timestamp: string
 ];
 
-export type HealthRow = [
+export type HealthHistoryRow = [
   id: number,
   voltage: number,
   fan_power_ok: number,
@@ -16,10 +16,10 @@ export type HealthRow = [
   timestamp: string
 ];
 
-export interface HistoryResponse {
-  data: LogRow[];
+export interface TemperatureHistoryResponse {
+  data: TemperatureHistoryRow[];
 }
 
-export interface HealthResponse {
-  data: HealthRow[];
+export interface HealthHistoryResponse {
+  data: HealthHistoryRow[];
 }

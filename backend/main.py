@@ -63,8 +63,8 @@ def update_hw():
     led = "1" if state.manual_mode else "0"
     f_vals = ["1" if f else "0" for f in state.fans]
     try:
-        subprocess.check_output([sys.executable, "../hardware/dummy/DOUT_write.py", led, *f_vals], timeout=1)
-        #subprocess.check_output([sys.executable, "../hardware/real/DOUT_write.py", led, *f_vals], timeout=1)
+        # subprocess.check_output([sys.executable, "../hardware/dummy/DOUT_write.py", led, *f_vals], timeout=1)
+        subprocess.check_output([sys.executable, "../hardware/real/DOUT_write.py", led, *f_vals], timeout=1)
         state.hw_error = False
     except:
         state.hw_error = True
@@ -72,8 +72,8 @@ def update_hw():
 async def control_loop():
     while True:
         try:
-            raw = subprocess.check_output([sys.executable, "../hardware/dummy/ADC_read.py"], text=True, timeout=1).strip()
-            #raw = subprocess.check_output([sys.executable, "../hardware/real/ADC_read.py"], text=True, timeout=1).strip()
+            # raw = subprocess.check_output([sys.executable, "../hardware/dummy/ADC_read.py"], text=True, timeout=1).strip()
+            raw = subprocess.check_output([sys.executable, "../hardware/real/ADC_read.py"], text=True, timeout=1).strip()
             state.hw_error = False
             t, v = map(float, raw.split(','))
             state.current_temp, state.voltage = t, v * 4.3
@@ -136,6 +136,29 @@ def set_thresholds(t: List[float], user: str = Depends(verify_token)):
         state.thresholds = sorted(t)
         return {"status": "ok"}
     raise HTTPException(status_code=400)
+
+@app.get("/api/history")
+def get_history():
+    if not DPL:
+        raise HTTPException(status_code=500, detail="Database layer is not available")
+
+    return {"data": DPL.get_logs()}
+
+
+@app.get("/api/health")
+def get_health():
+    if not DPL:
+        raise HTTPException(status_code=500, detail="Database layer is not available")
+
+    return {"data": DPL.get_health()}
+
+
+@app.get("/api/config")
+def get_config():
+    if not DPL:
+        raise HTTPException(status_code=500, detail="Database layer is not available")
+
+    return {"data": DPL.get_config()}
 
 FRONTEND_DIR = Path(__file__).parent / "frontend"
 

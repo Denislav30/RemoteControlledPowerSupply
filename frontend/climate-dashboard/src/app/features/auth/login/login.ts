@@ -16,16 +16,7 @@ import { AuthService } from '../../../core/services/auth.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    CardModule,
-    InputTextModule,
-    PasswordModule,
-    ButtonModule,
-    MessageModule,
-    FloatLabelModule
-  ],
+  imports: [CommonModule, ReactiveFormsModule, CardModule, InputTextModule, PasswordModule, ButtonModule, MessageModule, FloatLabelModule],
   templateUrl: './login.html',
   styleUrl: './login.css'
 })
@@ -33,7 +24,6 @@ export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
-
   readonly loading = signal(false);
   readonly errorMessage = signal('');
 

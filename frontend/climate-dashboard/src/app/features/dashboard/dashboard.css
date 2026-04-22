@@ -23,12 +23,16 @@
   color: #64748b;
 }
 
-.alerts-slot {
-  min-height: 15px;
-  margin-bottom: 0.5rem;
+.alerts-overlay {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 3000;
+  width: min(420px, calc(100vw - 2rem));
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  pointer-events: none;
 }
 
 .alert-banner {
@@ -38,17 +42,13 @@
   padding: 1rem;
   border-radius: 14px;
   border: 1px solid transparent;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+  pointer-events: auto;
 }
 
 .alert-banner i {
   font-size: 1.1rem;
   margin-top: 0.15rem;
-}
-
-.alert-banner-danger {
-  background: #fee2e2;
-  color: #991b1b;
-  border-color: #fecaca;
 }
 
 .alert-banner-warning {
@@ -189,8 +189,16 @@
     font-size: 1.5rem;
   }
 
-  .alerts-slot {
-    min-height: 120px;
+  .alerts-overlay {
+    position: fixed;
+    top: 4rem;
+    right: 1rem;
+    z-index: 3000;
+    width: min(420px, calc(100vw - 2rem));
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    pointer-events: none;
   }
 
   .fan-item {

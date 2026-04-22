@@ -24,12 +24,9 @@ export class ControlService {
   }
 
   setThresholds(thresholds: number[]): Observable<{ status: string }> {
-    let params = new HttpParams();
-
-    thresholds.forEach((value) => {
-      params = params.append('t', value);
-    });
-
-    return this.http.post<{ status: string }>(`${this.apiUrl}/thresholds`, null, { params });
+    return this.http.post<{ status: string }>(
+      `${this.apiUrl}/thresholds`,
+      thresholds
+    );
   }
 }
