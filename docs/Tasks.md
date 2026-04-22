@@ -50,16 +50,15 @@ Ivailo
 [Prio 3] 5. Optimize database for low-resource environment (A20 constraints).
 ---------------------------------------------------------------------------------------
 Denislav
-    1. Design and develop a responsive Web Dashboard (React, Vue.js or similar) for mobile and desktop.
-    2. Implement real-time data polling (or WebSockets) for temperature monitoring and status updates.
-    3. Create UI controls for:
+   [DONE] 1. Design and develop a responsive Web Dashboard (Angular / Typescript).
+   [DONE] 2. Implement real-time data polling for temperature monitoring and status updates.
+   [DONE] 3. Create UI controls for:
         - Manual fan override toggle.
         - Threshold adjustment forms with validation.
         - Mode switch (auto/manual).
         - Historical data charts/graphs.
-    4. Implement user authentication and session management if needed.
-    5. Ensure cross-browser compatibility and mobile responsiveness.
-    6. Add notifications for alerts (e.g., high temperature warnings).
+   [DONE] 4. Implement user authentication and session management if needed.
+   [DONE] 5. Add notifications for alerts (e.g., high temperature warnings).
 ---------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------
 
