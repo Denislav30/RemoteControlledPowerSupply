@@ -19,7 +19,7 @@ except ImportError:
     DPL = None
 
 # --- Security Config ---
-SECRET_KEY = "olimex_secret_key_change_this"
+SECRET_KEY = "f8a9c3d2e1b7a6f5c4d3e2b1a0987654"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
