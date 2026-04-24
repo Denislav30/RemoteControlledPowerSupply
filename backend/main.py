@@ -89,6 +89,7 @@ async def control_loop():
                 reason = "manual" if state.manual_mode else "auto"
                 DPL.insert_log(state.current_temp, state.fans, reason)
                 DPL.insert_health(state.voltage, int(state.fan_power_ok), int(state.hw_error))
+                DPL.update_config(state.fans[0], state.fans[1], state.fans[2], state.hysteresis, reason)
         except:
             state.hw_error = True
             state.fans = [True, True, True]
